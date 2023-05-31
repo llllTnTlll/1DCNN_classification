@@ -11,33 +11,48 @@ import torch.nn.functional as F
 import os
 import numpy as np
 
+import torch
+from torch import nn
+from torch.nn import functional as F
 
-class My2DConv(nn.Module):
+
+class ConvNet(nn.Module):
     def __init__(self):
-        super(My2DConv, self).__init__()
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3)
-        self.pool2 = nn.MaxPool2d((2, 1))
-        self.fc1 = nn.Linear(128 * 4 * 12, 300)
+        super(ConvNet, self).__init__()
+
+        # 卷积层
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1)
+
+        # 池化层
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 1))
+
+        # 全连接层
+        self.fc1 = nn.Linear(128 * 5 * 26, 300)
         self.fc2 = nn.Linear(300, 21)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.pool(x)
-        x = self.conv3(x)
-        x = F.relu(x)
+        # 增加一个维度表示单通道
+        x = x.unsqueeze(1)
+
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.pool1(x)
+        x = F.relu(self.conv3(x))
         x = self.pool2(x)
-        x = x.view(-1, 128 * 4 * 12)     
-        x = self.fc1(x)
-        x = F.relu(x)
+
+        # 展平
+        x = x.view(x.size(0), -1)
+
+        x = F.relu(self.fc1(x))
         x = self.fc2(x)
-        x = F.softmax(x, dim=1)
-        return x
+
+        # softmax
+        output = F.log_softmax(x, dim=1)
+
+        return output
 
 
 def main():
